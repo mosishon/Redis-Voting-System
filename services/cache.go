@@ -83,6 +83,10 @@ func (cs *CacheService) GetFromCaches(ctx context.Context, minVotes int) ([]mode
 
 }
 
-var CacheSerice CacheService = CacheService{
-	CacheDuration: time.Second * 280,
+var CacheServiceInstance CacheService
+
+func init() {
+	CacheServiceInstance = CacheService{
+		CacheDuration: time.Second * 280,
+	}
 }

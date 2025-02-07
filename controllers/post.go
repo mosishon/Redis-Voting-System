@@ -106,7 +106,7 @@ func GetPosts() gin.HandlerFunc {
 				})
 				return
 			}
-			filteredPosts, err = services.CacheSerice.GetFromCaches(c.Request.Context(), minVotes)
+			filteredPosts, err = services.CacheServiceInstance.GetFromCaches(c.Request.Context(), minVotes)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"details": "can not get from cache",
@@ -152,7 +152,7 @@ func GetPosts() gin.HandlerFunc {
 				}
 			}
 
-			err = services.CacheSerice.SetCache(c.Request.Context(), minVotes, filteredPosts)
+			err = services.CacheServiceInstance.SetCache(c.Request.Context(), minVotes, filteredPosts)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"details": "can not set cache",
@@ -208,7 +208,7 @@ func UpVotePost() gin.HandlerFunc {
 			})
 			return
 		}
-		services.CacheSerice.InvalidateCache(c.Request.Context(), newPost.VotesCount)
+		services.CacheServiceInstance.InvalidateCache(c.Request.Context(), newPost.VotesCount)
 		c.JSON(http.StatusOK, gin.H{
 			"new_post": newPost,
 			"vote":     vote,

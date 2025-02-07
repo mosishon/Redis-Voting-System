@@ -49,8 +49,29 @@ The API provides several routes for interacting with posts and votes.
 
 ### 2. **Get Posts**
    - **Endpoint**: `GET /posts`
-   - **Description**: Retrieves all posts, potentially from cache if they have a sufficient number of votes.
-   - **Response**: A list of posts in JSON format.
+   - **Description**: Retrieves all posts, potentially from cache if they have a sufficient number of votes. You can filter the posts by the minimum number of votes (`min_vote`) using a query parameter. The result is cached based on the `min_vote` value, and the cache will expire if a new vote is added that changes the vote count of the posts, potentially invalidating the current cached results.
+   - **Query Parameter**: 
+     - `min_vote`: (Optional) An integer specifying the minimum number of votes a post should have in order to be retrieved. If provided, the API will return posts with a `VotesCount` greater than the specified value.
+   - **Response**: A list of posts in JSON format. If the posts are available in cache (with sufficient votes), they will be fetched directly from Redis. Otherwise, the system will retrieve them from the database and filter them based on the `min_vote` value. If the cache is used, the response will indicate that the data was fetched from the cache. If a new vote changes the vote count of any post, the cache will be invalidated to ensure the results are up to date.
+
+   - **Example Request**: `GET /posts?min_vote=10`
+   - **Example Response**:
+      ```json
+      {
+          "posts": [
+            {
+              "id": "1234",
+              "title": "Post Title",
+              "content": "Post content here",
+              "votes_count": 15
+            },
+          ],
+          "count": 1,
+          "from_cache": true
+        }
+      ```
+
+
 ### 3. **Get Post by ID**
    - **Endpoint**: `GET /post/:post_id`
    - **Description**: Fetches a single post by its unique ID.

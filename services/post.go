@@ -116,3 +116,44 @@ func (service *PostService) DownVote(ctx context.Context, ByUser int) (*models.P
 	}
 
 }
+
+func (ps *PostService) GetAllPosts(ctx context.Context) (*[]models.Post, error) {
+	var cursor uint64
+	var keys []string
+	var err error
+	var posts []models.Post
+	for {
+		keys, cursor, err = database.Client.Scan(ctx, cursor, "posts.*", 100).Result()
+		if err != nil {
+			fmt.Println("Error:", err)
+			return nil, err
+		}
+
+		for _, key := range keys {
+			var post models.Post
+			database.Client.HGetAll(ctx, key).Scan(&post)
+			if post.Content != "" {
+				posts = append(posts, post)
+			}
+		}
+
+		if cursor == 0 {
+			break
+		}
+	}
+	return &posts, nil
+}
+func (ps *PostService) GetAllPostsFilterByVote(ctx context.Context, minVote int) (*[]models.Post, error) {
+	posts, err := ps.GetAllPosts(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var filteredPosts []models.Post
+	for _, value := range *posts {
+		if value.VotesCount >= minVote {
+			filteredPosts = append(filteredPosts, value)
+		}
+	}
+	return &filteredPosts, nil
+
+}

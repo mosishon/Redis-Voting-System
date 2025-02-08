@@ -11,11 +11,12 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type CacheService struct {
+// Just One instance
+type cacheService struct {
 	CacheDuration time.Duration
 }
 
-func (cs *CacheService) SetCache(ctx context.Context, minVote int, result []models.Post) error {
+func (cs *cacheService) SetCache(ctx context.Context, minVote int, result []models.Post) error {
 	fmt.Printf("Setting cache minVote:%d\n", minVote)
 	data, err := json.Marshal(result)
 	if err != nil {
@@ -37,7 +38,7 @@ func (cs *CacheService) SetCache(ctx context.Context, minVote int, result []mode
 	return nil
 
 }
-func (cs *CacheService) InvalidateCache(ctx context.Context, newVotes int) error {
+func (cs *cacheService) InvalidateCache(ctx context.Context, newVotes int) error {
 	keysToDelete, err := database.Client.ZRangeByScore(ctx, "cached_min_likes", &redis.ZRangeBy{
 		Min: "-inf",
 		Max: fmt.Sprintf("%d", newVotes-1),
@@ -63,7 +64,7 @@ func (cs *CacheService) InvalidateCache(ctx context.Context, newVotes int) error
 	return nil
 }
 
-func (cs *CacheService) GetFromCaches(ctx context.Context, minVotes int) ([]models.Post, error) {
+func (cs *cacheService) GetFromCaches(ctx context.Context, minVotes int) ([]models.Post, error) {
 
 	cacheKey := fmt.Sprintf("top_posts_%d", minVotes)
 
@@ -83,10 +84,10 @@ func (cs *CacheService) GetFromCaches(ctx context.Context, minVotes int) ([]mode
 
 }
 
-var CacheServiceInstance CacheService
+var CacheServiceInstance cacheService
 
 func init() {
-	CacheServiceInstance = CacheService{
+	CacheServiceInstance = cacheService{
 		CacheDuration: time.Second * 280,
 	}
 }

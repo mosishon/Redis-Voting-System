@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strconv"
 	"upvotesystem/database"
@@ -89,13 +88,12 @@ func GetPost() gin.HandlerFunc {
 
 func GetPosts() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var posts []models.Post
-		var cursor uint64
-		var keys []string
-		var err error
 
+		var posts []models.Post
 		var minVotes int
-		var filteredPosts []models.Post
+		var err error
+		var useCache bool = false
+		postService := services.PostService{}
 
 		min_vote := c.Query("min_vote")
 		if min_vote != "" {
@@ -106,63 +104,47 @@ func GetPosts() gin.HandlerFunc {
 				})
 				return
 			}
-			filteredPosts, err = services.CacheServiceInstance.GetFromCaches(c.Request.Context(), minVotes)
+
+			cachedPosts, err := services.CacheServiceInstance.GetFromCaches(c.Request.Context(), minVotes)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"details": "can not get from cache",
 				})
 				return
-			}
-			if filteredPosts != nil {
-				c.JSON(http.StatusOK, gin.H{
-					"posts":      filteredPosts,
-					"count":      len(filteredPosts),
-					"from_cache": true,
-				})
-				return
-			}
-
-		}
-		for {
-			keys, cursor, err = database.Client.Scan(c.Request.Context(), cursor, "posts.*", 100).Result()
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-
-			for _, key := range keys {
-				var post models.Post
-				database.Client.HGetAll(c.Request.Context(), key).Scan(&post)
-				if post.Content != "" {
-					posts = append(posts, post)
+			} else if cachedPosts != nil {
+				// No Cache found for this request
+				posts = cachedPosts
+				useCache = true
+			} else {
+				// requesting to DB
+				refPosts, err := postService.GetAllPostsFilterByVote(c.Request.Context(), minVotes)
+				if err != nil {
+					c.JSON(http.StatusOK, gin.H{
+						"details": err.Error(),
+					})
+					return
 				}
-			}
+				posts = *refPosts
+				// Cache the results for next request
+				services.CacheServiceInstance.SetCache(c.Request.Context(), minVotes, posts)
 
-			if cursor == 0 {
-				break
 			}
-		}
-		if min_vote == "" {
-			filteredPosts = posts
 
 		} else {
-			for _, item := range posts {
-				if item.VotesCount > minVotes {
-					filteredPosts = append(filteredPosts, item)
-				}
-			}
-
-			err = services.CacheServiceInstance.SetCache(c.Request.Context(), minVotes, filteredPosts)
+			// no filter
+			refPosts, err := postService.GetAllPosts(c.Request.Context())
+			posts = *refPosts
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"details": "can not set cache",
+				c.JSON(http.StatusOK, gin.H{
+					"details": err.Error(),
 				})
-				return
+
 			}
 		}
 		c.JSON(http.StatusOK, gin.H{
-			"posts": filteredPosts,
-			"count": len(filteredPosts),
+			"posts":    posts,
+			"count":    len(posts),
+			"useCache": useCache,
 		})
 	}
 }

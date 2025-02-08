@@ -67,7 +67,7 @@ The API provides several routes for interacting with posts and votes.
             },
           ],
           "count": 1,
-          "from_cache": true
+          "useCache": true// Result came from cache or no
         }
       ```
 

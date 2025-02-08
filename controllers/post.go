@@ -112,10 +112,11 @@ func GetPosts() gin.HandlerFunc {
 				})
 				return
 			} else if cachedPosts != nil {
-				// No Cache found for this request
+				// Read From Caches
 				posts = cachedPosts
 				useCache = true
 			} else {
+				// No Cache found for this request
 				// requesting to DB
 				refPosts, err := postService.GetAllPostsFilterByVote(c.Request.Context(), minVotes)
 				if err != nil {
